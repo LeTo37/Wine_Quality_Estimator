@@ -33,7 +33,9 @@ class Classifier:
     self.y = []
 
   def setup_features(self):
-    # setup i/o
+    '''
+    setup i/o
+    '''
     self.Features = np.ones((len(self.x1),11))
     self.Features[:,0] = self.x1
     self.Features[:,1] = self.x2
@@ -46,6 +48,18 @@ class Classifier:
     self.Features[:,8] = self.x9
     self.Features[:,9] = self.x10
     self.Features[:,10] = self.x11
+
+  def setup_classifiers(self):
+    self.y = np.array(self.y)
+    self.y = np.reshape(self.y,(self.y.size,1))
+    self.ylabel = np.ones((self.y.shape))
+    for i in range(0,self.y.size):
+      if (self.y[i] < 5):
+        self.ylabel[i] = 0
+      elif (self.y[i] < 7):
+        self.ylabel[i] = 1
+      else:
+        self.ylabel[i] = 2
 
   def read_file(self, csvname):
     '''
@@ -113,9 +127,14 @@ class Classifier:
       trainy[h] = trainy_temp
     return trainx, trainy, testx, testy
 
-  def train_and_test(self, model,trainx,trainy,testx,testy):
+  def train_and_test(self, 
+                     model, 
+                     trainx, 
+                     trainy, 
+                     testx, 
+                     testy):
     stime = time.time()
-    algorithm = model.fit(trainx,trainy)
+    algorithm = model.fit(trainx, trainy)
     etime = time.time()
     train_time = etime-stime
     log = False
@@ -135,7 +154,14 @@ class Classifier:
              str(accuracy))
     return algorithm, accuracy
 
-  def bestK_retrain(self, Features, model,trainx,trainy,testx,testy, ylabel):
+  def bestK_retrain(self, 
+                    Features, 
+                    model,
+                    trainx,
+                    trainy,
+                    testx, 
+                    testy, 
+                    ylabel):
     stime = time.time()
     mod = []
     acc = []
@@ -151,7 +177,7 @@ class Classifier:
     print("The best accuracy achieved for "+ best_mod.__class__.__name__+ " is: " + str(best_acc))
     etime = time.time()
     tot_time = etime-stime
-    print("Time taken for "+ best_mod.__class__.__name__+ " model= "+ str(tot_time))
+    print("Time: "+ best_mod.__class__.__name__+ " model= "+ str(tot_time))
     return best_mod,best_acc,tot_time
 
   def test_models(self, Features, trainx, trainy, testx, testy, ylabel):
@@ -214,16 +240,7 @@ class Classifier:
   def run(self):
     self.load()
     self.setup_features()
-    self.y = np.array(self.y)
-    self.y = np.reshape(self.y,(self.y.size,1))
-    self.ylabel = np.ones((self.y.shape))
-    for i in range(0,self.y.size):
-      if (self.y[i] < 5):
-        self.ylabel[i] = 0
-      elif (self.y[i] < 7):
-        self.ylabel[i] = 1
-      else:
-        self.ylabel[i] = 2
+    self.setup_classifiers()
     self.train()
     self.compare()
     self.results()
@@ -232,7 +249,6 @@ class Classifier:
 main
 """
 def main():
-
   c = Classifier()
   c.run()
 
