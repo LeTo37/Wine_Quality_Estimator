@@ -81,10 +81,13 @@ def k_fold_split(x,y,k=3):
     count = 0
     for j in range(0,i.size):
       if ((j)+int(i.size/k)*(h) < l):
-        testx_temp[j] = (np.take(xtemp,i[(j)+int(i.size/k)*(h)],axis=0))
-        testy_temp[j] = (np.take(ytemp,i[(j)+int(i.size/k)*(h)]))
+        testx_temp[j] = (np.take(xtemp,i[(j)+
+                         int(i.size/k)*(h)],axis=0))
+        testy_temp[j] = (np.take(ytemp,i[(j)+
+                         int(i.size/k)*(h)]))
       else:
-        trainx_temp[count] = (np.take(xtemp,i[j],axis=0))
+        trainx_temp[count] = (np.take(xtemp,i[j],
+                                      axis=0))
         trainy_temp[count] = (np.take(ytemp,i[j]))
         count+=1
     testx[h] = testx_temp
@@ -98,7 +101,7 @@ def train_and_test(model,trainx,trainy,testx,testy):
   algorithm = model.fit(trainx,trainy)
   etime = time.time()
   train_time = etime-stime
-  log = True
+  log = False
   if(log):
     print("training time = "+ str(train_time))    
     
@@ -111,7 +114,8 @@ def train_and_test(model,trainx,trainy,testx,testy):
     
   accuracy = accuracy_score(testy,prediction)
   if(log):
-    print("The accuracy of this prediction is: " + str(accuracy))
+    print("The accuracy of this prediction is: " + 
+           str(accuracy))
   return algorithm,accuracy
 
 def bestK_retrain(Features, model,trainx,trainy,testx,testy, ylabel):
@@ -157,7 +161,9 @@ def test_models(Features, trainx, trainy, testx, testy, ylabel):
 main
 """
 def main():
-  global x1, x2, x3, x4, x5, x6, x7, x8, x9, x19, x11
+  global x1, x2, x3, x4, x5
+  global x6, x7, x8, x9, x10
+  global x11
   global y
 
   # load
@@ -166,8 +172,6 @@ def main():
 
   # setup i/o
   Features = np.ones((len(x1),11))
-  y = np.array(y)
-  y = np.reshape(y,(y.size,1))
   Features[:,0] = x1
   Features[:,1] = x2
   Features[:,2] = x3
@@ -180,6 +184,8 @@ def main():
   Features[:,9] = x10
   Features[:,10] = x11
 
+  y = np.array(y)
+  y = np.reshape(y,(y.size,1))
   ylabel = np.ones((y.shape))
   for i in range(0,y.size):
     if (y[i] < 5):
@@ -190,25 +196,39 @@ def main():
       ylabel[i] = 2
 
   # train
-  trainx,trainy,testx,testy = k_fold_split(Features,ylabel)
+  trainx,trainy,testx,testy = k_fold_split(Features,
+                                           ylabel)
   #reshape for sklearn
-  testy = np.reshape(testy,(testy.shape[0],testy.shape[1],))
-  trainy = np.reshape(trainy,(trainy.shape[0],trainy.shape[1],))
-  print("testx has the following shape: " + str(testx.shape))
-  print("testy has the following shape: " + str(testy.shape))
-  print("trainx has the following shape: " + str(trainx.shape))
-  print("trainy has the following shape: " + str(trainy.shape))
+  testy = np.reshape(testy,(testy.shape[0],
+                            testy.shape[1],))
+  trainy = np.reshape(trainy,(trainy.shape[0],
+                              trainy.shape[1],))
+  print("testx has the following shape: " + 
+         str(testx.shape))
+  print("testy has the following shape: " + 
+         str(testy.shape))
+  print("trainx has the following shape: " + 
+         str(trainx.shape))
+  print("trainy has the following shape: " + 
+         str(trainy.shape))
 
   # compare
-
-  models,accs,times = test_models(Features, trainx, trainy, testx, testy, ylabel)
+  models,accs,times = test_models(Features, 
+                                  trainx, 
+                                  trainy, 
+                                  testx, 
+                                  testy, 
+                                  ylabel)
   models = np.array(models)
   accs = np.array(accs)
   times = np.array(times)
   acc_ind = np.argmax(accs)
   time_ind = np.argmin(times)
-  print("The model with the best accuray is " + models[acc_ind].__class__.__name__)
-  print("The model with the fastest processing is " + models[time_ind].__class__.__name__)
+
+  # results
+  print("The model with the best accuray is " + 
+         models[acc_ind].__class__.__name__)
+  print("The model with the fastest processing is "+         models[time_ind].__class__.__name__)
 
 """
 run
