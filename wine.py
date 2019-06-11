@@ -1,16 +1,21 @@
 """
 import
 """
+
+# std
 import csv
 import numpy as np
 import time
+import matplotlib.pyplot as plt
+
+# sklearn
+from sklearn import tree
 from sklearn.metrics import fbeta_score
 from sklearn.metrics import accuracy_score
 from sklearn.naive_bayes import GaussianNB
-from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn import tree
 from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
 """
@@ -18,48 +23,45 @@ global
 """
 
 class Classifier:
-  def __init__(self):
-    self.Features = self.x1 = []
-    self.Features = self.x2 = []
-    self.Features = self.x3 = []
-    self.x4 = []
-    self.x5 = []
-    self.x6 = []
-    self.x7 = []
-    self.x8 = []
-    self.x9 = []
-    self.x10 = []
-    self.x11 = []
+  def __init__(self, 
+               files, 
+               delim=';', 
+               boundaries = [5, 7], 
+               labels = [0, 1, 2]):
+    self.delim = delim
+    self.files = files
+    self.boundaries = boundaries
+    self.labels = labels 
+    self.verbose = False
+    self.x = []
     self.y = []
 
   def setup_features(self):
     '''
     setup i/o
     '''
-    self.Features = np.ones((len(self.x1),11))
-    self.Features[:,0] = self.x1
-    self.Features[:,1] = self.x2
-    self.Features[:,2] = self.x3
-    self.Features[:,3] = self.x4
-    self.Features[:,4] = self.x5
-    self.Features[:,5] = self.x6
-    self.Features[:,6] = self.x7
-    self.Features[:,7] = self.x8
-    self.Features[:,8] = self.x9
-    self.Features[:,9] = self.x10
-    self.Features[:,10] = self.x11
+    self.Features = np.ones((len(self.x[0]),len(self.x)))
 
-  def setup_classifiers(self):
+    for i in range(len(self.x)):
+      self.Features[:,i] = self.x[i]
+
+  def plot(self, title, xtitle, ytitle, x, y):
+    plt.plot(x, y)
+    plt.xlabel(xtitle)
+    plt.ylabel(ytitle)
+    plt.show()
+
+  def setup_classifier(self):
     self.y = np.array(self.y)
     self.y = np.reshape(self.y,(self.y.size,1))
     self.ylabel = np.ones((self.y.shape))
-    for i in range(0,self.y.size):
-      if (self.y[i] < 5):
-        self.ylabel[i] = 0
-      elif (self.y[i] < 7):
-        self.ylabel[i] = 1
-      else:
-        self.ylabel[i] = 2
+
+    for i in range(self.y.size):
+      self.ylabel[i] = self.labels[-1]
+      for j in range(len(self.boundaries)):
+        if self.y[i] < j:
+          print(i, j)
+          self.ylabel[i] = self.labels[j]
 
   def read_file(self, csvname):
     '''
@@ -68,20 +70,17 @@ class Classifier:
     and output arrays
     '''
     with open(csvname) as f:
-      reader = csv.DictReader(f, delimiter=';')
+      reader = csv.DictReader(f, delimiter=self.delim)
+      num_fields = len(reader.fieldnames)
+      if(len(self.x) == 0):
+        for i in range(0, num_fields - 1):
+          self.x.append([])
       for row in reader:
-        self.x1.append(float(row['fixed acidity']))
-        self.x2.append(float(row['volatile acidity']))
-        self.x3.append(float(row['citric acid']))
-        self.x4.append(float(row['residual sugar']))
-        self.x5.append(float(row['chlorides']))
-        self.x6.append(float(row['free sulfur dioxide']))
-        self.x7.append(float(row['total sulfur dioxide']))
-        self.x8.append(float(row['density']))
-        self.x9.append(float(row['pH']))
-        self.x10.append(float(row['sulphates']))
-        self.x11.append(float(row['alcohol']))
-        self.y.append(float(row['quality']))
+        r = list(csv.OrderedDict(row).values())
+        for i in range(num_fields - 1):
+          self.x[i].append(float(r[i]))
+        self.y.append(float(r[num_fields-1]))
+    return
 
   def k_fold_split(self, x, y, k=3):
     '''
@@ -103,7 +102,6 @@ class Classifier:
     for h in range(0,k):
       xtemp = np.copy(x)
       ytemp = np.copy(y)
-      print(x.shape[0],k, x.shape[0]/k)
       testx_temp = np.zeros((int(round(x.shape[0]/k))+1,x.shape[1]))
       testy_temp = np.zeros((int(round(x.shape[0]/k))+1,y.shape[1]))
       trainx_temp = np.zeros((int(((k-1)*round(x.shape[0]/k)))+1,x.shape[1]))
@@ -111,20 +109,24 @@ class Classifier:
       l=int((i.size/k)*(h+1))
       count = 0
       for j in range(0,i.size):
-        if ((j)+int(i.size/k)*(h) < l):
-          testx_temp[j] = (np.take(xtemp,i[(j)+
-                           int(i.size/k)*(h)],axis=0))
-          testy_temp[j] = (np.take(ytemp,i[(j)+
-                           int(i.size/k)*(h)]))
-        else:
+        if ((j)+int(i.size/k)*(h) >= l):
           trainx_temp[count] = (np.take(xtemp,i[j],
                                         axis=0))
           trainy_temp[count] = (np.take(ytemp,i[j]))
           count+=1
-      testx[h] = testx_temp
-      testy[h] = testy_temp
+        else:
+          testx_temp[j] = (np.take(xtemp,i[(j)+
+                           int(i.size/k)*(h)],axis=0))
+          testy_temp[j] = (np.take(ytemp,i[(j)+
+                           int(i.size/k)*(h)]))
+      # train x, y
       trainx[h] = trainx_temp
       trainy[h] = trainy_temp
+
+      # test x, y
+      testx[h] = testx_temp
+      testy[h] = testy_temp
+
     return trainx, trainy, testx, testy
 
   def train_and_test(self, 
@@ -137,19 +139,18 @@ class Classifier:
     algorithm = model.fit(trainx, trainy)
     etime = time.time()
     train_time = etime-stime
-    log = False
-    if(log):
+    if(self.verbose):
       print("training time = "+ str(train_time))    
       
     stime = time.time()
     prediction = algorithm.predict(testx)
     etime = time.time()
     train_time = etime-stime
-    if(log):
+    if(self.verbose):
       print("testing time = "+ str(train_time))
     
     accuracy = accuracy_score(testy,prediction)
-    if(log):
+    if(self.verbose):
       print("The accuracy of this prediction is: " + 
              str(accuracy))
     return algorithm, accuracy
@@ -174,50 +175,78 @@ class Classifier:
     best_mod = mod[ind]
     best_pred = best_mod.predict(self.Features)
     best_acc = accuracy_score(ylabel,best_pred)
-    print("The best accuracy achieved for "+ best_mod.__class__.__name__+ " is: " + str(best_acc))
+
+    print("-----", 
+          best_mod.__class__.__name__,
+          "-----")
+    print("Accuracy: " + str(best_acc))
     etime = time.time()
     tot_time = etime-stime
-    print("Time: "+ best_mod.__class__.__name__+ " model= "+ str(tot_time))
+    print("Time:", str(tot_time))
+    print("----------")
+    print()
+
     return best_mod,best_acc,tot_time
 
-  def test_models(self, Features, trainx, trainy, testx, testy, ylabel):
-    Gaussian_model= GaussianNB()
-    LogReg_model = LogisticRegression()
-    DTree_model = tree.DecisionTreeClassifier()
-    RForest_model = RandomForestClassifier(n_estimators=1000)
-    KNN_model = KNeighborsClassifier()
-    Net_model = MLPClassifier(alpha = 1)
-    list_models = [Gaussian_model,LogReg_model,DTree_model,RForest_model,KNN_model,Net_model]  
+  def test_models(self, 
+                  Features, 
+                  trainx, 
+                  trainy, 
+                  testx, 
+                  testy, 
+                  ylabel):
     models = []
     accs = []
     times = []
+    list_models = [GaussianNB(),
+                   LogisticRegression(),
+                   tree.DecisionTreeClassifier(),
+                   RandomForestClassifier(n_estimators=1000),
+                   KNeighborsClassifier(),
+                   MLPClassifier(alpha = 1)]  
+
     for i in list_models:
-      mod_i, acc_i,times_i = self.bestK_retrain(self.Features, i,trainx,trainy,testx,testy, ylabel)
-      print("")
+      mod_i, acc_i,times_i = self.bestK_retrain(self.Features, 
+                            i,
+                            trainx,
+                            trainy,
+                            testx,
+                            testy, 
+                            ylabel)
       models.append(mod_i)
       accs.append(acc_i)
       times.append(times_i)
     return models,accs,times
 
   def load(self):
-    self.read_file("winequality-red.csv")
-    self.read_file("winequality-white.csv")
+    for file in self.files:
+      self.read_file(file)
 
   def train(self):
+    # k_fold
     self.trainx,self.trainy,self.testx,self.testy = self.k_fold_split(self.Features, self.ylabel)
+
     #reshape for sklearn
     self.testy = np.reshape(self.testy,(self.testy.shape[0],
                               self.testy.shape[1],))
     self.trainy = np.reshape(self.trainy,(self.trainy.shape[0],
                                 self.trainy.shape[1],))
-    print("testx has the following shape: " +
+
+    # output
+    print("-----")
+    print("testx shape: " +
            str(self.testx.shape))
-    print("testy has the following shape: " +
+    print("testy shape: " +
            str(self.testy.shape))
-    print("trainx has the following shape: " +
+    print("trainx shape: " +
            str(self.trainx.shape))
-    print("trainy has the following shape: " +
+    print("trainy shape: " +
            str(self.trainy.shape))
+    print("-----")
+    print()
+
+    #self.plot("title", "xtitle", "ytitle", 
+               #self.testx, self.testy)
 
   def compare(self):
     models,accs,times = self.test_models(self.Features,
@@ -233,14 +262,16 @@ class Classifier:
     self.time_ind = np.argmin(times)
 
   def results(self):
-    print("The model with the best accuray is " +
+    print("=====")
+    print("Most accurate: " +
            self.models[self.acc_ind].__class__.__name__)
-    print("The model with the fastest processing is "+         self.models[self.time_ind].__class__.__name__)
+    print("Fastest: "+         self.models[self.time_ind].__class__.__name__)
+    print("=====")
 
   def run(self):
     self.load()
     self.setup_features()
-    self.setup_classifiers()
+    self.setup_classifier()
     self.train()
     self.compare()
     self.results()
@@ -249,9 +280,9 @@ class Classifier:
 main
 """
 def main():
-  c = Classifier()
+  c = Classifier(["winequality-red.csv",
+                  "winequality-white.csv"])
   c.run()
-
 """
 run
 """
