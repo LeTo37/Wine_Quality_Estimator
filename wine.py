@@ -326,9 +326,9 @@ main
 def main():
 
   linspace = np.linspace(0.2, 1.0, num=5)
+  c = Classifier(["winequality-red.csv",
+                  "winequality-white.csv"])
   for i in linspace:
-    c = Classifier(["winequality-red.csv",
-                    "winequality-white.csv"])
     c.param_density = i
     c.run()
   
