@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from sklearn import tree
 from sklearn.metrics import fbeta_score
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import mean_squared_error 
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neural_network import MLPClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -21,32 +22,33 @@ from sklearn.ensemble import RandomForestClassifier
 """
 global
 """
+DELIM = ';'
+BOUNDARIES = [5, 7]
+LABELS = [0, 1, 2]
+PARAM_DENSITY = 1.0
 
 class Classifier:
   def __init__(self, 
                files, 
-               delim=';', 
-               boundaries = [5, 7], 
-               labels = [0, 1, 2]):
+               delim = DELIM, 
+               boundaries = BOUNDARIES, 
+               labels = LABELS):
     self.delim = delim
     self.files = files
     self.boundaries = boundaries
     self.labels = labels 
     self.verbose = False
+    self.param_density = PARAM_DENSITY
     self.x = []
     self.y = []
 
   def setup_features(self):
-    '''
-    setup i/o
-    '''
     self.Features = np.ones((len(self.x[0]),len(self.x)))
 
     for i in range(len(self.x)):
       self.Features[:,i] = self.x[i]
 
-  def plot(self, title, xtitle, ytitle, x, y):
-    plt.plot(x, y)
+  def plot(self, title, xtitle, ytitle):
     plt.xlabel(xtitle)
     plt.ylabel(ytitle)
     plt.show()
@@ -59,8 +61,7 @@ class Classifier:
     for i in range(self.y.size):
       self.ylabel[i] = self.labels[-1]
       for j in range(len(self.boundaries)):
-        if self.y[i] < j:
-          print(i, j)
+        if self.y[i] < self.boundaries[j]:
           self.ylabel[i] = self.labels[j]
 
   def read_file(self, csvname):
@@ -71,15 +72,17 @@ class Classifier:
     '''
     with open(csvname) as f:
       reader = csv.DictReader(f, delimiter=self.delim)
-      num_fields = len(reader.fieldnames)
+      num_fields = int(len(reader.fieldnames) * 
+                           self.param_density) - 1
+      print("Paramaters: ", num_fields)
       if(len(self.x) == 0):
-        for i in range(0, num_fields - 1):
+        for i in range(0, num_fields):
           self.x.append([])
       for row in reader:
         r = list(csv.OrderedDict(row).values())
-        for i in range(num_fields - 1):
+        for i in range(num_fields):
           self.x[i].append(float(r[i]))
-        self.y.append(float(r[num_fields-1]))
+        self.y.append(float(r[len(reader.fieldnames)-1]))
     return
 
   def k_fold_split(self, x, y, k=3):
@@ -153,7 +156,13 @@ class Classifier:
     if(self.verbose):
       print("The accuracy of this prediction is: " + 
              str(accuracy))
-    return algorithm, accuracy
+
+    #report = classification_report(testy,prediction)
+    mse = mean_squared_error(testy,prediction)
+    if(self.verbose):
+      print("MSE:")
+      print(mse)
+    return algorithm, accuracy, mse
 
   def bestK_retrain(self, 
                     Features, 
@@ -166,15 +175,20 @@ class Classifier:
     stime = time.time()
     mod = []
     acc = []
+    mse = []
     for k in range(0,trainx.shape[0]):
-      mod_k,acc_k = self.train_and_test(model,trainx[k],trainy[k],testx[k],testy[k])
+      mod_k,acc_k, mse_k = self.train_and_test(model,trainx[k],trainy[k],testx[k],testy[k])
       mod.append(mod_k)
       acc.append(acc_k)
+      mse.append(mse_k)
     acc = np.array(acc)
     ind = np.argmax(acc)
+    mse = np.argmin(mse)
     best_mod = mod[ind]
     best_pred = best_mod.predict(self.Features)
     best_acc = accuracy_score(ylabel,best_pred)
+    best_mse = accuracy_score(ylabel,best_pred)
+    best_mse = mean_squared_error(ylabel,best_pred)
 
     print("-----", 
           best_mod.__class__.__name__,
@@ -183,6 +197,7 @@ class Classifier:
     etime = time.time()
     tot_time = etime-stime
     print("Time:", str(tot_time))
+    print("MSE:", str(best_mse))
     print("----------")
     print()
 
@@ -245,9 +260,6 @@ class Classifier:
     print("-----")
     print()
 
-    #self.plot("title", "xtitle", "ytitle", 
-               #self.testx, self.testy)
-
   def compare(self):
     models,accs,times = self.test_models(self.Features,
                                          self.trainx,
@@ -261,12 +273,45 @@ class Classifier:
     self.acc_ind = np.argmax(accs)
     self.time_ind = np.argmin(times)
 
+  def model_plots(self):
+    fig, ax = plt.subplots()
+    for i in range(len(self.x)):
+      plt.scatter(range(0, len(self.x[i])), 
+                  self.x[i])
+    self.plot("Scatter", "x", "y")
+
+    plt.scatter(range(0, len(self.y)),
+                  self.x[i])
+    self.plot("Scatter", "x", "y")
+      
+    # accuracy
+    fig, ax = plt.subplots()
+    labels = [item.get_text() for item in ax.get_xticklabels()]
+    for i in range(0, len(self.models)):
+      labels[i] = self.models[i].__class__.__name__
+    plt.bar(range(0, self.accs.size), self.accs)
+    ax.set_xticklabels(labels)
+    self.plot("Accuracy", "Model", "%")
+
+    # time
+    fig, ax = plt.subplots()
+    labels = [item.get_text() for item in ax.get_xticklabels()]
+    for i in range(0, len(self.models)):
+      labels[i] = self.models[i].__class__.__name__
+    plt.bar(range(0, self.times.size), self.times)
+    ax.set_xticklabels(labels)
+    self.plot("Time", "Model", "Seconds")
+
   def results(self):
     print("=====")
     print("Most accurate: " +
            self.models[self.acc_ind].__class__.__name__)
+    print("Most accurate:", self.accs[self.acc_ind])
     print("Fastest: "+         self.models[self.time_ind].__class__.__name__)
+    print("Time:", self.times[self.acc_ind])
     print("=====")
+
+    self.model_plots() 
 
   def run(self):
     self.load()
@@ -275,14 +320,18 @@ class Classifier:
     self.train()
     self.compare()
     self.results()
-
 """
 main
 """
 def main():
-  c = Classifier(["winequality-red.csv",
-                  "winequality-white.csv"])
-  c.run()
+
+  linspace = np.linspace(0.2, 1.0, num=5)
+  for i in linspace:
+    c = Classifier(["winequality-red.csv",
+                    "winequality-white.csv"])
+    c.param_density = i
+    c.run()
+  
 """
 run
 """
